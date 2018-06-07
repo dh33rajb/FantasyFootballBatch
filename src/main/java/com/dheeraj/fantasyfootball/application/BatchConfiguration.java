@@ -4,7 +4,6 @@ import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.DefaultBatchConfigurer;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -12,35 +11,38 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.context.annotation.Import;
 
+import com.dheeraj.fantasyfootball.configuration.CoreBatchConfiguration;
+import com.dheeraj.fantasyfootball.configuration.DataSourceConfiguration;
+import com.dheeraj.fantasyfootball.configuration.QuartzConfiguration;
+import com.dheeraj.fantasyfootball.configuration.RestConfiguration;
 import com.dheeraj.fantasyfootball.domain.model.FantasyFootballResponse;
 import com.dheeraj.fantasyfootball.listener.JobCompletionNotificationListener;
 import com.dheeraj.fantasyfootball.processor.FantasyFootballBatchProcessor;
 import com.dheeraj.fantasyfootball.reader.FantasyFootballApiReader;
 import com.dheeraj.fantasyfootball.writer.FantasyFootballDatastoreWriter;
 
+/**
+ * Batch job configuration class.
+ */
 @Configuration
 @EnableBatchProcessing
-public class FantasyFootballBatchConfiguration extends DefaultBatchConfigurer {
+@Import({ DataSourceConfiguration.class, RestConfiguration.class, CoreBatchConfiguration.class, QuartzConfiguration.class })
+public class BatchConfiguration {
 
-	static final String JOB_NAME = "FantasyFootballStatsJob";
+	public static final String JOB_NAME = "FantasyFootballStatsJob";
 
 	static final String STEP_NAME = "step1";
-
-	/*
-	 * JobRepository, JobLauncher, JobRegistry and PlatformTransactionManager
-	 * are already autowired via @EnableBatchProcessing
-	 */
 
 	@Autowired
 	public JobBuilderFactory jobBuilderFactory;
 
 	@Autowired
 	public StepBuilderFactory stepBuilderFactory;
-
 
 	@Bean
 	public JobCompletionNotificationListener jobCompletionNotificationListener() {
@@ -54,10 +56,9 @@ public class FantasyFootballBatchConfiguration extends DefaultBatchConfigurer {
 	}
 
 	@Bean
-	public Step step() {
+	public Step step(@Qualifier("mysqlDataSource") final DataSource dataSource) {
 		return this.stepBuilderFactory.get(STEP_NAME).<FantasyFootballResponse, FantasyFootballResponse>chunk(1)
-				.reader(reader()).processor(processor()).writer(writer()).faultTolerant()
-				.build();
+				.reader(reader()).processor(processor()).writer(writer(dataSource)).faultTolerant().build();
 	}
 
 	@Bean
@@ -71,17 +72,7 @@ public class FantasyFootballBatchConfiguration extends DefaultBatchConfigurer {
 	}
 
 	@Bean
-	public ItemWriter<FantasyFootballResponse> writer() {
+	public ItemWriter<FantasyFootballResponse> writer(@Qualifier("mysqlDataSource") final DataSource dataSource) {
 		return new FantasyFootballDatastoreWriter();
-	}
-	
-	@Bean
-	public RestTemplate restTemplate() {
-		return new RestTemplate();
-	}
-	
-	@Override
-	public void setDataSource(DataSource dataSource) {
-		
 	}
 }
