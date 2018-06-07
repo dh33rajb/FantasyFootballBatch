@@ -1,0 +1,9 @@
+USE FantasyFootball;
+SET SQL_SAFE_UPDATES = 0;
+DELETE FROM PlayerStats;
+DELETE FROM PlayerPerformanceStats;
+DELETE FROM Player;
+DELETE FROM TeamStats;
+DELETE FROM Team;
+DELETE FROM Position;
+SET SQL_SAFE_UPDATES = 1;
